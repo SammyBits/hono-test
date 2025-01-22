@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { users } from "../services/users";
 import { zValidator } from '@hono/zod-validator'
 import { Prisma, type User } from "@prisma/client";
-import { userSchema } from "../schemas/user";
+import { createUser, searchUserByAccountId } from "../schemas/user";
 
 const usersRoutes = new Hono();
 
@@ -14,7 +14,21 @@ const usersRoutes = new Hono();
  * @example
  * 
  */
-
+usersRoutes.post("/",zValidator("json", createUser), async (c) => { 
+  try { 
+    const user = await c.req.json<Omit<User, "id" | "accountId">>();
+    const dbUser = await users.createUser(user);
+    return c.json({ message: "User created"}, 201);
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    } catch (error: any) {
+        // If unique constraint error, return 400 Bad Request
+        if (error.code === "P2002") {
+            const field = error.meta?.target;
+            return c.json({ message: `Field ${field} already exists` }, 400);
+        }
+        return c.json({ message: error.message, code: error.code }, 500);
+    }   
+});
 
 usersRoutes.get("/", async (c) => {
     const dbUsers = await users.getUsers();
@@ -25,7 +39,7 @@ usersRoutes.get("/", async (c) => {
     return c.json(dbUsers);
 });
 
-usersRoutes.get("/:accountId", async (c) => {
+usersRoutes.get("/:accountId", zValidator("param",searchUserByAccountId), async (c) => {
     const accountId = c.req.param("accountId");
     const user = await users.getUserById(accountId);
 
@@ -36,14 +50,14 @@ usersRoutes.get("/:accountId", async (c) => {
     return c.json(user);
 });
 
-usersRoutes.put("/:accountId", async (c) => {
+usersRoutes.put("/:accountId", zValidator("param",searchUserByAccountId), async (c) => {
     const accountId = c.req.param("accountId");
     const user = await c.req.json<Omit<User, "id">>();
     const dbUser = await users.updateUser(accountId, user);
     return c.json(dbUser);
 });
 
-usersRoutes.delete("/:accountId", async (c) => {
+usersRoutes.delete("/:accountId", zValidator("param",searchUserByAccountId),async (c) => {
     const accountId = c.req.param("accountId");
     await users.desactiveUser(accountId);
     return c.json({ message: "User desactived" });

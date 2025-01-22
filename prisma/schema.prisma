@@ -14,26 +14,25 @@ datasource db {
 }
 
 model User {
-  id    Int     @id @default(autoincrement())
-  accountId String @unique @default(uuid())
-  email String  @unique
-  name  String?
-  password String
-  isActive Boolean @default(true)
-  posts Post[]
+  id        Int      @id @default(autoincrement())
+  accountId String   @unique @default(uuid())
+  email     String   @unique
+  name      String?
+  password  String
+  isActive  Boolean  @default(true)
+  posts     Post[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Post {
-  id        Int     @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
+  postId    String   @unique @default(uuid())
+  published Boolean  @default(true)
+  title     String
+  content   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  published Boolean
-  title     String
-  content   String?   
-  author    User?   @relation(fields: [authorId], references: [id])
-  authorId  Int?
+  authorId  String
+  author    User?    @relation(fields: [authorId], references: [accountId])
 }
-
-
